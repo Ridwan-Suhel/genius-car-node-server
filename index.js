@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
@@ -20,6 +21,18 @@ async function run() {
   try {
     await client.connect();
     const serviceCollection = client.db("geniusCar").collection("service");
+    const orderCollection = client.db("geniusCar").collection("order");
+
+    // auth
+    app.post("/login", async (req, res) => {
+      const user = req.body;
+      const accesToken = jwt.sign(user, process.env.ACCESS_TOKEN, {
+        expiresIn: "1d",
+      });
+      res.send({ accesToken });
+    });
+
+    // services api
 
     app.get("/service", async (req, res) => {
       const query = {};
@@ -47,6 +60,32 @@ async function run() {
         const query = { _id: ObjectId(id) };
         const result = await serviceCollection.deleteOne(query);
         res.send(result);
+      });
+
+      // order collection api
+
+      app.post("/orders", async (req, res) => {
+        const order = req.body;
+        const result = await orderCollection.insertOne(order);
+        res.send(result);
+      });
+
+      // =========================================
+      // ===========(Have to do it again)=============
+      // =========================================
+      // 68-7 (advanced) Send jwt token in the server, verify and decode jwt token
+      // =========================================
+      // =========================================
+      // =========================================
+
+      app.get("/orders", async (req, res) => {
+        const authHeader = req.headers.authorization;
+        console.log(authHeader);
+        const email = req.query.email;
+        const query = { email: email };
+        const cursor = orderCollection.find(query);
+        const orders = await cursor.toArray();
+        res.send(orders);
       });
     });
   } finally {
